@@ -376,6 +376,7 @@ func TestNewAzureIpamInvoker(t *testing.T) {
 	NewAzureIpamInvoker(nil, nil)
 }
 
+// test if the constructor removes IPAM state file if CNI state file unavailable.
 func TestRemoveIPAMState(t *testing.T) {
 	dir, file := filepath.Split(platform.CNIIpamStatePath)
 
