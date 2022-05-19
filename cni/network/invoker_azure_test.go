@@ -4,10 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/Azure/azure-container-networking/cni"
 	"github.com/Azure/azure-container-networking/network"
+	"github.com/Azure/azure-container-networking/platform"
 	cniSkel "github.com/containernetworking/cni/pkg/skel"
 	cniTypes "github.com/containernetworking/cni/pkg/types"
 	cniTypesCurr "github.com/containernetworking/cni/pkg/types/current"
@@ -371,4 +374,37 @@ func TestAzureIPAMInvoker_Delete(t *testing.T) {
 
 func TestNewAzureIpamInvoker(t *testing.T) {
 	NewAzureIpamInvoker(nil, nil)
+}
+
+func TestRemoveIPAMState(t *testing.T) {
+	dir, file := filepath.Split(platform.CNIIpamStatePath)
+
+	_, error := os.Stat(dir)
+	if error == nil {
+		t.Fatal(error)
+	}
+	if os.IsNotExist(error) {
+		errorDir := os.MkdirAll(dir, 0o755)
+		if errorDir != nil {
+			t.Fatal(error)
+		}
+	}
+	_, err := os.Create(file)
+	if err != nil {
+		t.Fatalf("Fail to create file: %v", err)
+	}
+
+	NewAzureIpamInvoker(nil, nil) // this deletes the IPAM state file
+
+	exist := false
+	exist, err = platform.CheckIfFileExists(platform.CNIIpamStatePath)
+	if err != nil {
+		t.Fatalf("Failed to check if file exist %v", err)
+	}
+	if exist == true {
+		t.Fatal("Failed to delete Ipam state file")
+	}
+
+	defer os.Remove(file)
+	defer os.Remove(dir)
 }

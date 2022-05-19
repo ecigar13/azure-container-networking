@@ -34,9 +34,10 @@ func NewAzureIpamInvoker(plugin *NetPlugin, nwInfo *network.NetworkInfo) *AzureI
 	if err != nil {
 		log.Printf("[cni] Error checking CNI state exist: %v", err)
 	}
+
 	ipamStateExists, err := platform.CheckIfFileExists(platform.CNIIpamStatePath)
 	if err != nil {
-		log.Printf("[cni] Error checking CNI state exist: %v", err)
+		log.Printf("[cni] Error checking IPAM state exist: %v", err)
 	}
 
 	if !cniStateExists && ipamStateExists {
