@@ -57,20 +57,20 @@ func (invoker *AzureIPAMInvoker) Add(addConfig IPAMAddConfig) (IPAMAddResult, er
 	if err != nil {
 
 		if errors.Is(err, ipam.ErrNoAvailableAddressPools) {
-			cniStateExists, err := platform.CheckIfFileExists(platform.CNIStateFilePath)
+			cniStateExists, er := platform.CheckIfFileExists(platform.CNIStateFilePath)
 			if err != nil {
-				log.Printf("[cni] Error checking CNI state exist: %v", err)
+				log.Printf("[cni] Error checking CNI state exist: %v", er)
 			}
 
-			ipamStateExists, err := platform.CheckIfFileExists(platform.CNIIpamStatePath)
+			ipamStateExists, er := platform.CheckIfFileExists(platform.CNIIpamStatePath)
 			if err != nil {
-				log.Printf("[cni] Error checking IPAM state exist: %v", err)
+				log.Printf("[cni] Error checking IPAM state exist: %v", er)
 			}
 
 			if !cniStateExists && ipamStateExists {
-				err = os.Remove(platform.CNIIpamStatePath)
-				if err != nil {
-					log.Printf("[cni] error deleting state file %v", err)
+				er = os.Remove(platform.CNIIpamStatePath)
+				if er != nil {
+					log.Printf("[cni] error deleting state file %v", er)
 				}
 			}
 		}
@@ -123,20 +123,20 @@ func (invoker *AzureIPAMInvoker) Delete(address *net.IPNet, nwCfg *cni.NetworkCo
 	if address == nil {
 		if err := invoker.plugin.DelegateDel(nwCfg.Ipam.Type, nwCfg); err != nil {
 			if errors.Is(err, ipam.ErrNoAvailableAddressPools) {
-				cniStateExists, err := platform.CheckIfFileExists(platform.CNIStateFilePath)
+				cniStateExists, er := platform.CheckIfFileExists(platform.CNIStateFilePath)
 				if err != nil {
-					log.Printf("[cni] Error checking CNI state exist: %v", err)
+					log.Printf("[cni] Error checking CNI state exist: %v", er)
 				}
 
-				ipamStateExists, err := platform.CheckIfFileExists(platform.CNIIpamStatePath)
-				if err != nil {
-					log.Printf("[cni] Error checking IPAM state exist: %v", err)
+				ipamStateExists, er := platform.CheckIfFileExists(platform.CNIIpamStatePath)
+				if er != nil {
+					log.Printf("[cni] Error checking IPAM state exist: %v", er)
 				}
 
 				if !cniStateExists && ipamStateExists {
-					err = os.Remove(platform.CNIIpamStatePath)
-					if err != nil {
-						log.Printf("[cni] error deleting state file %v", err)
+					er = os.Remove(platform.CNIIpamStatePath)
+					if er != nil {
+						log.Printf("[cni] error deleting state file %v", er)
 					}
 				}
 			}
