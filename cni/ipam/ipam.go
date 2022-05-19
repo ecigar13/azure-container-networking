@@ -167,9 +167,7 @@ func (plugin *ipamPlugin) Add(args *cniSkel.CmdArgs) error {
 
 		// Allocate an address pool.
 		poolID, subnet, err = plugin.am.RequestPool(nwCfg.Ipam.AddrSpace, "", "", options, isIpv6)
-
 		if err != nil {
-
 			err = plugin.Errorf("Failed to allocate pool: %v", err)
 			return err
 		}
