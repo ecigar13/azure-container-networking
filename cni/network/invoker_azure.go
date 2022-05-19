@@ -3,12 +3,14 @@ package network
 import (
 	"fmt"
 	"net"
+	"os"
 	"runtime/debug"
 
 	"github.com/Azure/azure-container-networking/cni"
 	"github.com/Azure/azure-container-networking/common"
 	"github.com/Azure/azure-container-networking/log"
 	"github.com/Azure/azure-container-networking/network"
+	"github.com/Azure/azure-container-networking/platform"
 	cniSkel "github.com/containernetworking/cni/pkg/skel"
 	cniTypes "github.com/containernetworking/cni/pkg/types"
 	cniTypesCurr "github.com/containernetworking/cni/pkg/types/current"
@@ -25,7 +27,25 @@ type delegatePlugin interface {
 	Errorf(format string, args ...interface{}) *cniTypes.Error
 }
 
+// Create an instance of CNI, then call a delegate function for CNI action (ADD/DEL)
+// Avoid having IPAM state but no CNI state.
 func NewAzureIpamInvoker(plugin *NetPlugin, nwInfo *network.NetworkInfo) *AzureIPAMInvoker {
+	cniStateExists, err := platform.CheckIfFileExists(platform.CNIStateFilePath)
+	if err != nil {
+		log.Printf("[cni] Error checking CNI state exist: %v", err)
+	}
+	ipamStateExists, err := platform.CheckIfFileExists(platform.CNIIpamStatePath)
+	if err != nil {
+		log.Printf("[cni] Error checking CNI state exist: %v", err)
+	}
+
+	if !cniStateExists && ipamStateExists {
+		err = os.Remove(platform.CNIIpamStatePath)
+		if err != nil {
+			log.Printf("[cni] error clearing state %v", err)
+		}
+	}
+
 	return &AzureIPAMInvoker{
 		plugin: plugin,
 		nwInfo: nwInfo,
