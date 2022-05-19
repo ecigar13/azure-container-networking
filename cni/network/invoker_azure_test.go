@@ -379,17 +379,17 @@ func TestNewAzureIpamInvoker(t *testing.T) {
 func TestRemoveIPAMState(t *testing.T) {
 	dir, file := filepath.Split(platform.CNIIpamStatePath)
 
-	_, error := os.Stat(dir)
-	if error == nil {
-		t.Fatal(error)
+	_, err := os.Stat(dir)
+	if err == nil {
+		t.Fatal(err)
 	}
-	if os.IsNotExist(error) {
+	if os.IsNotExist(err) {
 		errorDir := os.MkdirAll(dir, 0o755)
 		if errorDir != nil {
-			t.Fatal(error)
+			t.Fatal(err)
 		}
 	}
-	_, err := os.Create(file)
+	_, err = os.Create(file)
 	if err != nil {
 		t.Fatalf("Fail to create file: %v", err)
 	}
@@ -405,6 +405,6 @@ func TestRemoveIPAMState(t *testing.T) {
 		t.Fatal("Failed to delete Ipam state file")
 	}
 
-	defer os.Remove(file)
-	defer os.Remove(dir)
+	os.Remove(file)
+	os.Remove(dir)
 }
