@@ -172,17 +172,17 @@ func (plugin *ipamPlugin) Add(args *cniSkel.CmdArgs) error {
 
 		if err != nil {
 			if errors.Is(err, ipam.ErrNoAvailableAddressPools) {
-				var exists, err = platform.CheckIfFileExists(platform.CNIStateFilePath)
+
+				exists := false
+				exists, err = platform.CheckIfFileExists(platform.CNIStateFilePath)
 				if err != nil {
 					log.Printf("[cni-ipam] Error checking CNI state exist: %v", err)
-					return err
 				}
 
 				if !exists {
-					err := os.Remove(platform.CNIIpamStatePath)
+					err = os.Remove(platform.CNIIpamStatePath)
 					if err != nil {
 						log.Printf("[cni-ipam] error clearing state %v", err)
-						return err
 					}
 				}
 			}
