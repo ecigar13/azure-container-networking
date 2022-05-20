@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/Azure/azure-container-networking/cni"
+	"github.com/Azure/azure-container-networking/ipam"
 	"github.com/Azure/azure-container-networking/network"
 	"github.com/Azure/azure-container-networking/platform"
 	cniSkel "github.com/containernetworking/cni/pkg/skel"
@@ -219,6 +220,25 @@ func TestAzureIPAMInvoker_Add(t *testing.T) {
 			want1:   nil,
 			wantErr: true,
 		},
+		{
+			name: "happy add ipv4",
+			fields: fields{
+				plugin: &mockDelegatePlugin{
+					add: add{
+						resultsIPv4: getResult("10.0.0.1/24"),
+						errv4:       ipam.ErrNoAvailableAddressPools,
+					},
+					del: del{},
+				},
+				nwInfo: getNwInfo("10.0.0.0/24", ""),
+			},
+			args: args{
+				nwCfg:        &cni.NetworkConfig{},
+				subnetPrefix: getCIDRNotationForAddress("10.0.0.0/24"),
+			},
+			want:    getResult("10.0.0.1/24")[0],
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -374,38 +394,4 @@ func TestAzureIPAMInvoker_Delete(t *testing.T) {
 
 func TestNewAzureIpamInvoker(t *testing.T) {
 	NewAzureIpamInvoker(nil, nil)
-}
-
-// test if the constructor removes IPAM state file if CNI state file unavailable.
-func TestRemoveIPAMState(t *testing.T) {
-	dir, file := filepath.Split(platform.CNIIpamStatePath)
-
-	_, err := os.Stat(dir)
-	if err == nil {
-		t.Fatal(err)
-	}
-	if os.IsNotExist(err) {
-		errorDir := os.MkdirAll(dir, 0o755)
-		if errorDir != nil {
-			t.Fatal(err)
-		}
-	}
-	_, err = os.Create(file)
-	if err != nil {
-		t.Fatalf("Fail to create file: %v", err)
-	}
-
-	NewAzureIpamInvoker(nil, nil) // this deletes the IPAM state file
-
-	exist := false
-	exist, err = platform.CheckIfFileExists(platform.CNIIpamStatePath)
-	if err != nil {
-		t.Fatalf("Failed to check if file exist %v", err)
-	}
-	if exist == true {
-		t.Fatal("Failed to delete Ipam state file")
-	}
-
-	os.Remove(file)
-	os.Remove(dir)
 }

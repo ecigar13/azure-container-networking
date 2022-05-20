@@ -73,6 +73,8 @@ func (invoker *AzureIPAMInvoker) Add(addConfig IPAMAddConfig) (IPAMAddResult, er
 					log.Printf("[cni] error deleting state file %v", er)
 				}
 			}
+
+			log.Printf("[cni] Deleted IPAM state file")
 		}
 		err = invoker.plugin.Errorf("Failed to allocate pool: %v", err)
 		return addResult, err
