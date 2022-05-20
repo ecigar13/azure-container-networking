@@ -218,24 +218,6 @@ func TestAzureIPAMInvoker_Add(t *testing.T) {
 			want1:   nil,
 			wantErr: true,
 		},
-		{
-			name: "add ipv4 and delete IPAM state on ErrNoAvailableAddressPools",
-			fields: fields{
-				plugin: &mockDelegatePlugin{
-					add: add{
-						resultsIPv4: getResult("10.0.0.1/24"),
-						errv4:       ipam.ErrNoAvailableAddressPools,
-					},
-				},
-				nwInfo: getNwInfo("10.0.0.0/24", ""),
-			},
-			args: args{
-				nwCfg:        &cni.NetworkConfig{},
-				subnetPrefix: getCIDRNotationForAddress("10.0.0.0/24"),
-			},
-			wantErrType: ipam.ErrNoAvailableAddressPools,
-			wantErr:     true,
-		},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -394,7 +376,7 @@ func TestNewAzureIpamInvoker(t *testing.T) {
 }
 
 func TestRemoveIpamState_Add(t *testing.T) {
-	require := require.New(t)
+	requires := require.New(t)
 	type fields struct {
 		plugin delegatePlugin
 		nwInfo *network.NetworkInfo
@@ -419,8 +401,7 @@ func TestRemoveIpamState_Add(t *testing.T) {
 			fields: fields{
 				plugin: &mockDelegatePlugin{
 					add: add{
-						resultsIPv4: getResult("10.0.0.1/24"),
-						errv4:       ipam.ErrNoAvailableAddressPools,
+						errv4: ipam.ErrNoAvailableAddressPools,
 					},
 				},
 				nwInfo: getNwInfo("10.0.0.0/24", ""),
@@ -429,7 +410,6 @@ func TestRemoveIpamState_Add(t *testing.T) {
 				nwCfg:        &cni.NetworkConfig{},
 				subnetPrefix: getCIDRNotationForAddress("10.0.0.0/24"),
 			},
-			// want:       getResult("10.0.0.1/24")[0],
 			wantErrMsg: "resetting IPAM state",
 			wantErr:    true,
 		},
@@ -442,15 +422,13 @@ func TestRemoveIpamState_Add(t *testing.T) {
 				nwInfo: tt.fields.nwInfo,
 			}
 
-			ipamAddResult, err := invoker.Add(IPAMAddConfig{nwCfg: tt.args.nwCfg, args: tt.args.in1, options: tt.args.options})
+			_, err := invoker.Add(IPAMAddConfig{nwCfg: tt.args.nwCfg, args: tt.args.in1, options: tt.args.options})
 			if tt.wantErr {
-				require.NotNil(err) // use NotNil since *cniTypes.Error is not of type Error
-				require.ErrorContains(err, tt.wantErrMsg)
+				requires.NotNil(err) // use NotNil since *cniTypes.Error is not of type Error
+				requires.ErrorContains(err, tt.wantErrMsg)
 			} else {
-				require.Nil(err)
+				requires.Nil(err)
 			}
-			require.Exactly(tt.want, ipamAddResult.ipv4Result)
-			require.Exactly(tt.want1, ipamAddResult.ipv6Result)
 		})
 	}
 }
