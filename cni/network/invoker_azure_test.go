@@ -4,14 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/Azure/azure-container-networking/cni"
 	"github.com/Azure/azure-container-networking/ipam"
 	"github.com/Azure/azure-container-networking/network"
-	"github.com/Azure/azure-container-networking/platform"
 	cniSkel "github.com/containernetworking/cni/pkg/skel"
 	cniTypes "github.com/containernetworking/cni/pkg/types"
 	cniTypesCurr "github.com/containernetworking/cni/pkg/types/current"
@@ -221,14 +218,13 @@ func TestAzureIPAMInvoker_Add(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "happy add ipv4",
+			name: "add ipv4 and delete IPAM state on ErrNoAvailableAddressPools",
 			fields: fields{
 				plugin: &mockDelegatePlugin{
 					add: add{
-						resultsIPv4: getResult("10.0.0.1/24"),
-						errv4:       ipam.ErrNoAvailableAddressPools,
+						// resultsIPv4: getResult("10.0.0.1/24"),
+						errv4: ipam.ErrNoAvailableAddressPools,
 					},
-					del: del{},
 				},
 				nwInfo: getNwInfo("10.0.0.0/24", ""),
 			},
@@ -236,7 +232,7 @@ func TestAzureIPAMInvoker_Add(t *testing.T) {
 				nwCfg:        &cni.NetworkConfig{},
 				subnetPrefix: getCIDRNotationForAddress("10.0.0.0/24"),
 			},
-			want:    getResult("10.0.0.1/24")[0],
+			// want:    getResult("10.0.0.1/24")[0],
 			wantErr: true,
 		},
 	}

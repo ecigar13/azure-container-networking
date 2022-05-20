@@ -29,8 +29,7 @@ type delegatePlugin interface {
 	Errorf(format string, args ...interface{}) *cniTypes.Error
 }
 
-// Create an instance of CNI, then call a delegate function for CNI action (ADD/DEL)
-// Avoid having IPAM state but no CNI state.
+// Create an IPAM instance every time a CNI action is called.
 func NewAzureIpamInvoker(plugin *NetPlugin, nwInfo *network.NetworkInfo) *AzureIPAMInvoker {
 	return &AzureIPAMInvoker{
 		plugin: plugin,
@@ -75,8 +74,10 @@ func (invoker *AzureIPAMInvoker) Add(addConfig IPAMAddConfig) (IPAMAddResult, er
 			}
 
 			log.Printf("[cni] Deleted IPAM state file")
+			addResult.ipv4Result, err = invoker.plugin.DelegateAdd(addConfig.nwCfg.Ipam.Type, addConfig.nwCfg)
+		} else {
+			err = invoker.plugin.Errorf("Failed to allocate pool: %v", err)
 		}
-		err = invoker.plugin.Errorf("Failed to allocate pool: %v", err)
 		return addResult, err
 	}
 
