@@ -1,11 +1,11 @@
 package network
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"os"
 	"runtime/debug"
+	"strings"
 
 	"github.com/Azure/azure-container-networking/cni"
 	"github.com/Azure/azure-container-networking/common"
@@ -53,10 +53,11 @@ func (invoker *AzureIPAMInvoker) Add(addConfig IPAMAddConfig) (IPAMAddResult, er
 
 	// Call into IPAM plugin to allocate an address pool for the network.
 	addResult.ipv4Result, err = invoker.plugin.DelegateAdd(addConfig.nwCfg.Ipam.Type, addConfig.nwCfg)
-	if errors.Is(err, ipam.ErrNoAvailableAddressPools) {
-		err = invoker.deleteIpamState()
-		return addResult, err
-	} else if err != nil {
+
+	if err != nil && strings.Contains(err.Error(), ipam.ErrNoAvailableAddressPools.Error()) {
+		invoker.deleteIpamState()
+	}
+	if err != nil {
 		err = invoker.plugin.Errorf("Failed to allocate pool: %v", err)
 		return addResult, err
 	}
@@ -94,7 +95,8 @@ func (invoker *AzureIPAMInvoker) Add(addConfig IPAMAddConfig) (IPAMAddResult, er
 	return addResult, err
 }
 
-func (invoker *AzureIPAMInvoker) deleteIpamState() error {
+func (invoker *AzureIPAMInvoker) deleteIpamState() {
+	log.Printf("[cni] Deleting IPAM state file")
 	cniStateExists, err := platform.CheckIfFileExists(platform.CNIStateFilePath)
 	if err != nil {
 		log.Printf("[cni] Error checking CNI state exist: %v", err)
@@ -111,10 +113,6 @@ func (invoker *AzureIPAMInvoker) deleteIpamState() error {
 			log.Printf("[cni] Error deleting state file %v", err)
 		}
 	}
-
-	log.Printf("[cni] Deleted IPAM state file")
-	err = invoker.plugin.Errorf("No available address pool, resetting IPAM state: %v", err)
-	return err
 }
 
 func (invoker *AzureIPAMInvoker) Delete(address *net.IPNet, nwCfg *cni.NetworkConfig, _ *cniSkel.CmdArgs, options map[string]interface{}) error {
