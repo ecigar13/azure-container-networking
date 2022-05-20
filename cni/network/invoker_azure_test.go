@@ -133,12 +133,13 @@ func TestAzureIPAMInvoker_Add(t *testing.T) {
 		options      map[string]interface{}
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *cniTypesCurr.Result
-		want1   *cniTypesCurr.Result
-		wantErr bool
+		name        string
+		fields      fields
+		args        args
+		want        *cniTypesCurr.Result
+		want1       *cniTypesCurr.Result
+		wantErrType error
+		wantErr     bool
 	}{
 		{
 			name: "happy add ipv4",
@@ -222,8 +223,8 @@ func TestAzureIPAMInvoker_Add(t *testing.T) {
 			fields: fields{
 				plugin: &mockDelegatePlugin{
 					add: add{
-						// resultsIPv4: getResult("10.0.0.1/24"),
-						errv4: ipam.ErrNoAvailableAddressPools,
+						resultsIPv4: getResult("10.0.0.1/24"),
+						errv4:       ipam.ErrNoAvailableAddressPools,
 					},
 				},
 				nwInfo: getNwInfo("10.0.0.0/24", ""),
@@ -232,8 +233,8 @@ func TestAzureIPAMInvoker_Add(t *testing.T) {
 				nwCfg:        &cni.NetworkConfig{},
 				subnetPrefix: getCIDRNotationForAddress("10.0.0.0/24"),
 			},
-			// want:    getResult("10.0.0.1/24")[0],
-			wantErr: true,
+			wantErrType: ipam.ErrNoAvailableAddressPools,
+			wantErr:     true,
 		},
 	}
 	for _, tt := range tests {
@@ -390,4 +391,66 @@ func TestAzureIPAMInvoker_Delete(t *testing.T) {
 
 func TestNewAzureIpamInvoker(t *testing.T) {
 	NewAzureIpamInvoker(nil, nil)
+}
+
+func TestRemoveIpamState_Add(t *testing.T) {
+	require := require.New(t)
+	type fields struct {
+		plugin delegatePlugin
+		nwInfo *network.NetworkInfo
+	}
+	type args struct {
+		nwCfg        *cni.NetworkConfig
+		in1          *cniSkel.CmdArgs
+		subnetPrefix *net.IPNet
+		options      map[string]interface{}
+	}
+	tests := []struct {
+		name       string
+		fields     fields
+		args       args
+		want       *cniTypesCurr.Result
+		want1      *cniTypesCurr.Result
+		wantErrMsg string
+		wantErr    bool
+	}{
+		{
+			name: "add ipv4 and delete IPAM state on ErrNoAvailableAddressPools",
+			fields: fields{
+				plugin: &mockDelegatePlugin{
+					add: add{
+						resultsIPv4: getResult("10.0.0.1/24"),
+						errv4:       ipam.ErrNoAvailableAddressPools,
+					},
+				},
+				nwInfo: getNwInfo("10.0.0.0/24", ""),
+			},
+			args: args{
+				nwCfg:        &cni.NetworkConfig{},
+				subnetPrefix: getCIDRNotationForAddress("10.0.0.0/24"),
+			},
+			// want:       getResult("10.0.0.1/24")[0],
+			wantErrMsg: "resetting IPAM state",
+			wantErr:    true,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			invoker := &AzureIPAMInvoker{
+				plugin: tt.fields.plugin,
+				nwInfo: tt.fields.nwInfo,
+			}
+
+			ipamAddResult, err := invoker.Add(IPAMAddConfig{nwCfg: tt.args.nwCfg, args: tt.args.in1, options: tt.args.options})
+			if tt.wantErr {
+				require.NotNil(err) // use NotNil since *cniTypes.Error is not of type Error
+				require.ErrorContains(err, tt.wantErrMsg)
+			} else {
+				require.Nil(err)
+			}
+			require.Exactly(tt.want, ipamAddResult.ipv4Result)
+			require.Exactly(tt.want1, ipamAddResult.ipv6Result)
+		})
+	}
 }

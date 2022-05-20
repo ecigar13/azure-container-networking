@@ -53,31 +53,29 @@ func (invoker *AzureIPAMInvoker) Add(addConfig IPAMAddConfig) (IPAMAddResult, er
 
 	// Call into IPAM plugin to allocate an address pool for the network.
 	addResult.ipv4Result, err = invoker.plugin.DelegateAdd(addConfig.nwCfg.Ipam.Type, addConfig.nwCfg)
-	if err != nil {
-
-		if errors.Is(err, ipam.ErrNoAvailableAddressPools) {
-			cniStateExists, er := platform.CheckIfFileExists(platform.CNIStateFilePath)
-			if er != nil {
-				log.Printf("[cni] Error checking CNI state exist: %v", er)
-			}
-
-			ipamStateExists, er := platform.CheckIfFileExists(platform.CNIIpamStatePath)
-			if er != nil {
-				log.Printf("[cni] Error checking IPAM state exist: %v", er)
-			}
-
-			if !cniStateExists && ipamStateExists {
-				er = os.Remove(platform.CNIIpamStatePath)
-				if er != nil {
-					log.Printf("[cni] error deleting state file %v", er)
-				}
-			}
-
-			log.Printf("[cni] Deleted IPAM state file")
-			addResult.ipv4Result, err = invoker.plugin.DelegateAdd(addConfig.nwCfg.Ipam.Type, addConfig.nwCfg)
-		} else {
-			err = invoker.plugin.Errorf("Failed to allocate pool: %v", err)
+	if errors.Is(err, ipam.ErrNoAvailableAddressPools) {
+		cniStateExists, er := platform.CheckIfFileExists(platform.CNIStateFilePath)
+		if er != nil {
+			log.Printf("[cni] Error checking CNI state exist: %v", er)
 		}
+
+		ipamStateExists, er := platform.CheckIfFileExists(platform.CNIIpamStatePath)
+		if er != nil {
+			log.Printf("[cni] Error checking IPAM state exist: %v", er)
+		}
+
+		if !cniStateExists && ipamStateExists {
+			er = os.Remove(platform.CNIIpamStatePath)
+			if er != nil {
+				log.Printf("[cni] error deleting state file %v", er)
+			}
+		}
+
+		log.Printf("[cni] Deleted IPAM state file")
+		err = invoker.plugin.Errorf("No available address pool, resetting IPAM state: %v", err)
+		return addResult, err
+	} else if err != nil {
+		err = invoker.plugin.Errorf("Failed to allocate pool: %v", err)
 		return addResult, err
 	}
 
